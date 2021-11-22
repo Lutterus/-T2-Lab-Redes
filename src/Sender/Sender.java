@@ -25,13 +25,13 @@ public class Sender {
 		setClientSocket();
 		// obtem endereco ip do servidor com o DNS
 		setIp();
-
 		System.out.println("pronto para enviar");
-		// Envia o pacote
 		while (true) {
-			// Recebe o pacote
+			// Envia o pacote
 			sendMessage();
+			break;
 		}
+		clientSocket.close();
 	}
 
 	private static void sendMessage() {

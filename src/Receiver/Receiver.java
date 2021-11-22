@@ -27,7 +27,9 @@ public class Receiver {
 		while (true) {
 			// Recebe o pacote
 			receiveMessage();
+			break;
 		}
+		serverSocket.close();
 	}
 
 	private static void receiveMessage() {
