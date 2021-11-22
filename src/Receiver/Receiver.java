@@ -7,72 +7,81 @@ import java.net.InetAddress;
 import java.net.SocketException;
 
 public class Receiver {
-	private static int timeoutSeconds = 1;
-	private static int serverPort = 9876;
-	private static DatagramPacket receivePacket;
-	private static String message = "";
+	private static int timeoutSeconds = 2;
+	private static int receiverPort = 9876;
+	private static int senderPort = 9878;
+	private static DatagramSocket ReceiverSocket;
+	private static DatagramPacket receivedPacket;
 	private static InetAddress IPAddress;
-	private static int port;
-	private static DatagramSocket serverSocket;
+	private static String message = "ACK";
 
 	public static void main(String[] args) {
 		System.out.println("Iniciando...");
-		// Configura socket para o cliente
-		setClientSocket();
+		// Configura socket para o sender
+		setReceiverSocket();
 		// Declara o pacote a ser recebido
 		declarePackage();
-		// Obtem endereco ip do servidor com o DNS
-		setIp();
 		System.out.println("Pronto para receber");
 		while (true) {
 			// Recebe o pacote
 			receiveMessage();
+			setIp();
+			sendMessage();
 			break;
 		}
-		serverSocket.close();
+		ReceiverSocket.close();
+	}
+
+	private static void sendMessage() {
+		byte[] sendData = new byte[1024];
+		sendData = message.getBytes();
+		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, senderPort);
+		try {
+			ReceiverSocket.send(sendPacket);
+		} catch (IOException e) {
+			System.out.println("erro durante envio do pacote ao sender");
+			e.printStackTrace();
+		}
 	}
 
 	private static void receiveMessage() {
 		// Recebimento de mensagem
 		try {
-			serverSocket.receive(receivePacket);
+			ReceiverSocket.receive(receivedPacket);
 		} catch (IOException e) {
 			System.out.println("Ocorreu um erro ao receber a mensagem");
 		}
 		// Mensagem enviada
-		message = new String(receivePacket.getData());
-		System.out.println("message: " + message);
+		System.out.println("message: " + new String(receivedPacket.getData()));
 
 	}
 
 	private static void setIp() {
-		// Ip do cliente
+		// Ip do sender
 		try {
-			IPAddress = receivePacket.getAddress();
+			IPAddress = receivedPacket.getAddress();
 		} catch (Exception e) {
 			System.out.println();
 		}
-		// Porta
-		port = receivePacket.getPort();
 
 	}
 
 	private static void declarePackage() {
 		byte[] receiveData = new byte[1024];
-		receivePacket = new DatagramPacket(receiveData, receiveData.length);
+		receivedPacket = new DatagramPacket(receiveData, receiveData.length);
 
 	}
 
-	private static void setClientSocket() {
+	private static void setReceiverSocket() {
 		// DatagramSocket
 		try {
-			serverSocket = new DatagramSocket(serverPort);
+			ReceiverSocket = new DatagramSocket(receiverPort);
 		} catch (SocketException e1) {
 			System.out.println("Ocorreu um erro ao setar o datagram");
 		}
 		// Configuração de timeout
 //		try {
-//			serverSocket.setSoTimeout(timeoutSeconds * 1000);
+//			ReceiverSocket.setSoTimeout(timeoutSeconds * 1000);
 //		} catch (SocketException e) {
 //			System.out.println("Ocorreu um erro ao setar o time out");
 //		}
