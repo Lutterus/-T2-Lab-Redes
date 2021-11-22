@@ -17,16 +17,16 @@ public class Receiver {
 
 	public static void main(String[] args) {
 		System.out.println("Iniciando...");
+		// Configura socket para o cliente
+		setClientSocket();
+		// Declara o pacote a ser recebido
+		declarePackage();
+		// Obtem endereco ip do servidor com o DNS
+		setIp();
+		System.out.println("Pronto para receber");
 		while (true) {
-			// Configura socket para o cliente
-			setClientSocket();
-			// Declara o pacote a ser recebido
-			declarePackage();
-			// Obtem endereco ip do servidor com o DNS
-			setIp();
 			// Recebe o pacote
 			receiveMessage();
-
 		}
 	}
 

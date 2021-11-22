@@ -25,14 +25,16 @@ public class Sender {
 		setClientSocket();
 		// obtem endereco ip do servidor com o DNS
 		setIp();
-		// Começa a enviar os arquivos
-		start();
+
+		System.out.println("pronto para enviar");
+		// Envia o pacote
+		while (true) {
+			// Recebe o pacote
+			sendMessage();
+		}
 	}
 
-	private static void start() {
-		while (true) {
-			break;
-		}
+	private static void sendMessage() {
 		String sentence = "aaaa";
 		byte[] sendData = new byte[1024];
 		sendData = sentence.getBytes();
@@ -43,6 +45,7 @@ public class Sender {
 			System.out.println("erro durante envio do pacote ao servidor");
 			e.printStackTrace();
 		}
+
 	}
 
 	private static void setIp() {
