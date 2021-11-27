@@ -6,15 +6,18 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 public class Sender {
-	private static int timeoutSeconds = 2;
-	private static int receiverPort = 9876;
-	private static int senderPort = 9878;
-	private static DatagramSocket senderSocket;
-	private static DatagramPacket receivedPacket;
-	private static InetAddress IPAddress;
-	private static String message = "";
+	static int timeoutSeconds = 2;
+	static int receiverPort = 9876;
+	static int senderPort = 9878;
+	static DatagramSocket senderSocket;
+	static DatagramPacket receivedPacket;
+	static InetAddress IPAddress;
+	static ArrayList<String> messages;
+	static int SlowStart = 1;
 
 	public static void main(String[] args) {
 		System.out.println("Iniciando...");
@@ -25,12 +28,20 @@ public class Sender {
 		// obtem endereco ip do receiver com o DNS
 		setIp();
 		System.out.println("pronto para enviar");
-		while (true) {
-			// Envia o pacote
+		int testando = 0;
+		while (testando < 5) {
+			// Define o array de mensagens a enviar
 			getMessage();
-			sendMessage();
-			receiveACK();
-			break;
+			// Envia as mensagens, N vezes, de acordo com slow start
+			for (int i = 0; i < SlowStart; i++) {
+				sendMessage(i);
+			}
+			// Recebe as confirmações N vezes, de acordo com slow start
+			for (int i = 0; i < SlowStart; i++) {
+				receiveACK();
+			}
+			SlowStart++;
+			testando++;
 		}
 		senderSocket.close();
 	}
@@ -43,14 +54,14 @@ public class Sender {
 			System.out.println("Ocorreu um erro ao receber a mensagem");
 		}
 		// Mensagem enviada
-		message = new String(receivedPacket.getData());
-		System.out.println("message: " + message);
+		String ACK = new String(receivedPacket.getData());
+		System.out.println("ACK: " + ACK);
 
 	}
 
-	private static void sendMessage() {
+	private static void sendMessage(int i) {
 		byte[] sendData = new byte[1024];
-		sendData = message.getBytes();
+		sendData = messages.get(i).getBytes();
 		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, receiverPort);
 		try {
 			senderSocket.send(sendPacket);
@@ -61,7 +72,12 @@ public class Sender {
 	}
 
 	private static void getMessage() {
-		message = "aaa";
+		messages = new ArrayList<String>();
+		// TODO: Pedaços do arquivo
+		String newMessage = "Mensagem: " + SlowStart + " - ";
+		for (int i = 0; i < SlowStart; i++) {
+			messages.add(newMessage + i);
+		}
 	}
 
 	private static void setIp() {
