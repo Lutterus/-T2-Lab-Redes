@@ -7,6 +7,8 @@ import java.net.InetAddress;
 import java.net.SocketException;
 
 public class Receiver {
+	// Condição de parada
+	static boolean stop = false;
 	static int timeoutSeconds = 2;
 	static int receiverPort = 9876;
 	static int senderPort = 9878;
@@ -15,6 +17,10 @@ public class Receiver {
 	static InetAddress IPAddress;
 	static int ACK = 100;
 	static int SlowStart = 1;
+	// Qual o ultimo arquivo recebido
+	static int lastReadFile = 0;
+	// Manipulador de arquivos
+	static FileLumper fs = new FileLumper();
 
 	public static void main(String[] args) {
 		System.out.println("Iniciando...");
@@ -23,22 +29,34 @@ public class Receiver {
 		// Declara o pacote a ser recebido
 		declarePackage();
 		System.out.println("Pronto para receber");
-		int testando = 0;
-		while (testando < 5) {
+		while (!stop) {
 			// Recebe N mensagens, de acordo com slow start
 			for (int i = 0; i < SlowStart; i++) {
-				receiveMessage();
+				if (!stop) {
+					receiveMessage();
+				}
 			}
 			// Seta ip do sender para confirmar
 			setIp();
 			// Envia N conformações, de acordo com slow start
 			for (int i = 0; i < SlowStart; i++) {
-				sendMessage();
+				if (!stop) {
+					sendMessage();
+				}
 			}
-			SlowStart = SlowStart * 2;
-			testando++;
+			if (SlowStart < 10) {
+				SlowStart = SlowStart * 2;
+			}
 		}
 		ReceiverSocket.close();
+		// Monta o arquivo
+		try {
+			fs.mergeFiles();
+			System.out.println("Arquivo final pronto");
+		} catch (IOException e) {
+			System.out.println("Ocorreu um erro ao mergear os arquivos");
+			e.printStackTrace();
+		}
 	}
 
 	private static void sendMessage() {
@@ -54,16 +72,24 @@ public class Receiver {
 		}
 	}
 
+	// Recebimento de mensagem
 	private static void receiveMessage() {
-		// Recebimento de mensagem
 		try {
 			ReceiverSocket.receive(receivedPacket);
 		} catch (IOException e) {
 			System.out.println("Ocorreu um erro ao receber a mensagem");
 		}
-		// Mensagem enviada
-		System.out.println("Mensagem: " + new String(receivedPacket.getData()));
-
+		try {
+			lastReadFile++;
+			String message = new String(receivedPacket.getData());
+			if (message.contains("DONE")) {
+				stop = true;
+			} else {
+				fs.saveFile(lastReadFile, receivedPacket.getData());
+			}
+		} catch (Exception e) {
+			System.out.println("Ocorreu um erro ao escrevr o arquivo");
+		}
 	}
 
 	private static void setIp() {
@@ -71,7 +97,7 @@ public class Receiver {
 		try {
 			IPAddress = receivedPacket.getAddress();
 		} catch (Exception e) {
-			System.out.println();
+			System.out.println("Ocorreu um erro ao obter o ip de destino");
 		}
 
 	}
