@@ -40,7 +40,7 @@ public class Sender {
 			for (int i = 0; i < SlowStart; i++) {
 				receiveACK();
 			}
-			SlowStart++;
+			SlowStart = SlowStart * 2;
 			testando++;
 		}
 		senderSocket.close();

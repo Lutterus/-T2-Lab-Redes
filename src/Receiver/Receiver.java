@@ -35,7 +35,7 @@ public class Receiver {
 			for (int i = 0; i < SlowStart; i++) {
 				sendMessage();
 			}
-			SlowStart++;
+			SlowStart = SlowStart * 2;
 			testando++;
 		}
 		ReceiverSocket.close();
