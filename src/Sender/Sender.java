@@ -55,6 +55,8 @@ public class Sender {
 		setIp();
 		System.out.println("Pronto para enviar");
 		// -------------------------- //
+
+		// Fluxo de envio de mensagens e confirmações de entrega
 		while (lastReadFile < fileChunks) {
 			// Define o array de mensagens a enviar
 			getMessage();
@@ -62,10 +64,9 @@ public class Sender {
 			for (int i = 0; i < SlowStart; i++) {
 				sendMessage(i);
 			}
-			// Recebe as confirmações N vezes, de acordo com slow start
-			for (int i = 0; i < SlowStart; i++) {
-				receiveACK();
-			}
+			// Recebe uma confirmação
+			receiveACK();
+
 			if (SlowStart < 10) {
 				SlowStart = SlowStart * 2;
 			}
@@ -74,6 +75,8 @@ public class Sender {
 		senderSocket.close();
 	}
 
+	// Recebimento de ACK
+	// Confirmação do cliente de que recebeu corretamente os arquivos
 	private static void receiveACK() {
 		try {
 			senderSocket.receive(receivedPacket);
@@ -82,6 +85,8 @@ public class Sender {
 		}
 	}
 
+	// Envio de mensagens
+	// Envia N pedaços do arquivo, de acordo com slow start
 	private static void sendMessage(int index) {
 		byte[] sendData = new byte[1024];
 		FileInputStream fis = null;
@@ -105,6 +110,7 @@ public class Sender {
 		}
 	}
 
+	// Logica de obtenção dos pedaços do arquivo a serem enviados
 	private static void getMessage() {
 		messages = new ArrayList<File>();
 		for (int i = 0; i < SlowStart; i++) {
@@ -116,6 +122,7 @@ public class Sender {
 		}
 	}
 
+	// Config de IP
 	private static void setIp() {
 		try {
 			IPAddress = InetAddress.getByName("localhost");
@@ -127,11 +134,13 @@ public class Sender {
 		}
 	}
 
+	// Config de pacote
 	private static void declarePackage() {
 		byte[] receiveData = new byte[1024];
 		receivedPacket = new DatagramPacket(receiveData, receiveData.length);
 	}
 
+	// Config do socket
 	private static void setSenderSocket() {
 		try {
 			senderSocket = new DatagramSocket(senderPort);
@@ -141,6 +150,7 @@ public class Sender {
 		}
 	}
 
+	// Envio da mensagem de condição de parada
 	private static void sendFinalMessage() {
 		byte[] sendData = new byte[1024];
 		String message = "DONE";

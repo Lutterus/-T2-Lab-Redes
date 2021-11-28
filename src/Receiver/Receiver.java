@@ -34,6 +34,8 @@ public class Receiver {
 		// Seta ip do sender
 		setIp();
 		System.out.println("Pronto para receber");
+
+		// Fluxo de recebimento de mensagens e confirmações de entrega
 		while (!stop) {
 			// Recebe N mensagens, de acordo com slow start
 			for (int i = 0; i < SlowStart; i++) {
@@ -41,12 +43,9 @@ public class Receiver {
 					receiveMessage();
 				}
 			}
-			// Envia N conformações, de acordo com slow start
-			for (int i = 0; i < SlowStart; i++) {
-				if (!stop) {
-					sendMessage();
-				}
-			}
+			// Envia uma confirmação
+			sendMessage();
+
 			if (SlowStart < 10) {
 				SlowStart = SlowStart * 2;
 			}
@@ -62,6 +61,8 @@ public class Receiver {
 		}
 	}
 
+	// Envio de mensagem
+	// Confirma que recebeu os arquivos
 	private static void sendMessage() {
 		byte[] sendData = new byte[1024];
 		String newACK = Integer.toString(ACK + SlowStart);
@@ -75,25 +76,38 @@ public class Receiver {
 		}
 	}
 
-	private static void receiveMessage() {
+	// Recebimento de mensagens
+	// Recebe N pedaços do arquivo, de acordo com slow start
+	private static boolean receiveMessage() {
 		try {
+			// Recebe uma mensagem
 			receiverSocket.receive(receivedPacket);
-		} catch (IOException e) {
-			System.out.println("Ocorreu um erro ao receber a mensagem");
-		}
-		try {
+			// Atualiza o contador de arquivo
 			lastReadFile++;
-			String message = new String(receivedPacket.getData());
-			if (message.contains("DONE")) {
+			// Verifica se é um aviso de parada
+			if (shouldStop()) {
 				stop = true;
 			} else {
+				// Se nao deve, é um novo arquivo
 				fs.saveFile(lastReadFile, receivedPacket.getData());
 			}
-		} catch (Exception e) {
-			System.out.println("Ocorreu um erro ao escrevr o arquivo");
+			return true;
+		} catch (IOException e) {
+			System.out.println("Ocorreu um erro ao receber a mensagem");
+			return false;
 		}
 	}
 
+	// Verificação de condição de parada
+	private static boolean shouldStop() {
+		String message = new String(receivedPacket.getData());
+		if (message.contains("DONE")) {
+			return true;
+		}
+		return false;
+	}
+
+	// Config de IP
 	private static void setIp() {
 		try {
 			IPAddress = InetAddress.getByName("localhost");
@@ -103,12 +117,14 @@ public class Receiver {
 
 	}
 
+	// Config de pacote
 	private static void declarePackage() {
 		byte[] receiveData = new byte[1024];
 		receivedPacket = new DatagramPacket(receiveData, receiveData.length);
 
 	}
 
+	// Config do socket
 	private static void setReceiverSocket() {
 		try {
 			receiverSocket = new DatagramSocket(receiverPort);
