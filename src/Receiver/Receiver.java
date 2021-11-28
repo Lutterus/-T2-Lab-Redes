@@ -6,6 +6,9 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 
+import common.NetPackage;
+import common.Serializer;
+
 public class Receiver {
 	// Condição de parada
 	static boolean stop = false;
@@ -18,12 +21,13 @@ public class Receiver {
 	static InetAddress IPAddress;
 	// Manipulador de arquivos
 	static FileLumper fs = new FileLumper();
-	// ACK
-	static int ACK = 100;
+	static Serializer ser = new Serializer();
 	// Slow Star
 	static int SlowStart = 1;
 	// Qual o ultimo arquivo recebido
-	static int lastReadFile = 0;
+	static int seq = 0;
+	// ACK
+	static int ACK = 100;
 
 	public static void main(String[] args) {
 		System.out.println("Iniciando...");
@@ -38,6 +42,11 @@ public class Receiver {
 		// Fluxo de recebimento de mensagens e confirmações de entrega
 		boolean okToContinue = true;
 		while (!stop) {
+			okToContinue = true;
+			System.out.println("/////////////////////");
+			System.out.println("seq: " + seq);
+			System.out.println("SlowStart: " + SlowStart);
+			System.out.println("ACK: " + ACK);
 			// Recebe N mensagens, de acordo com slow start
 			for (int i = 0; i < SlowStart; i++) {
 				// Confição de parada
@@ -46,6 +55,10 @@ public class Receiver {
 				}
 				// Recebimento de mensagem
 				okToContinue = receiveMessage();
+
+			}
+			if (!okToContinue) {
+				recoverFromError();
 			}
 			// Envia uma confirmação
 			sendMessage();
@@ -53,6 +66,7 @@ public class Receiver {
 			if (okToContinue && SlowStart < 10) {
 				SlowStart = SlowStart * 2;
 			}
+			System.out.println("/////////////////////");
 		}
 		receiverSocket.close();
 		// Monta o arquivo
@@ -68,8 +82,11 @@ public class Receiver {
 	// Envio de mensagem
 	// Confirma que recebeu os arquivos
 	private static void sendMessage() {
+		System.out.println("entrou");
 		byte[] sendData = new byte[1024];
-		String newACK = Integer.toString(ACK + lastReadFile);
+		ACK = 100 + SlowStart;
+		System.out.println("enviando ACK:" + ACK);
+		String newACK = Integer.toString(ACK);
 		sendData = newACK.getBytes();
 		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, senderPort);
 		try {
@@ -85,35 +102,35 @@ public class Receiver {
 	private static boolean receiveMessage() {
 		try {
 			// Recebe uma mensagem
-			receiverSocket.receive(receivedPacket);
-			// Atualiza o contador de arquivo
-			lastReadFile++;
+			byte[] buffer = new byte[1024 * 4];
+			receiverSocket.receive(new DatagramPacket(buffer, buffer.length));
 			// Verifica se é um aviso de parada
-			if (shouldStop()) {
+			if (shouldStop(buffer)) {
+				System.out.println("era parada");
 				stop = true;
 			} else {
 				// Se nao deve, é um novo arquivo
-				fs.saveFile(lastReadFile, receivedPacket.getData());
+				NetPackage np = (NetPackage) ser.deserialize(buffer);
+				seq++;
+				fs.saveFile(seq, np.getFileArray());
 			}
 			return true;
-		} catch (IOException e) {
+		} catch (Exception e) {
+			System.out.println("--------------");
+			e.printStackTrace();
 			System.out.println("Ocorreu um erro ao receber a mensagem");
-			recoverFromError();
 			return false;
 		}
 	}
 
 	// Logica de recuperação em caso de erro
 	private static void recoverFromError() {
-		// Volta os arquivos lidos para o inicio da iteração
-		lastReadFile = lastReadFile - SlowStart;
-		// Volta slow start para 1
-		SlowStart = 1;
+		
 	}
 
 	// Verificação de condição de parada
-	private static boolean shouldStop() {
-		String message = new String(receivedPacket.getData());
+	private static boolean shouldStop(byte[] buffer) {
+		String message = new String(buffer);
 		if (message.contains("DONE")) {
 			return true;
 		}

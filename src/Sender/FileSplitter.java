@@ -14,7 +14,7 @@ public class FileSplitter {
 	// Para criar os arquivos com nome "arq001";
 	int fileNameCounter = 1;
 	// Tamanho fixo para cara arquivo
-	byte[] buffer = new byte[1024];
+	byte[] buffer = new byte[1000];
 	// Arquivo montado
 	File file;
 

@@ -1,7 +1,5 @@
 package Sender;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -9,6 +7,9 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+
+import common.NetPackage;
+import common.Serializer;
 
 public class Sender {
 	// Nome do arquivo a ser lido.
@@ -22,14 +23,17 @@ public class Sender {
 	static DatagramPacket receivedPacket;
 	static InetAddress IPAddress;
 	// Mensagens a serem lida em uma iteração
-	static ArrayList<File> messages;
+	static ArrayList<NetPackage> messages;
 	// Manipulador de arquivos
 	static FileSplitter fs;
 	static int fileChunks = 0;
+	static Serializer ser = new Serializer();
 	// Slow start
 	static int SlowStart = 1;
 	// Qual o ultimo arquivo enviado
-	static int lastReadFile = 0;
+	static int seq = 0;
+	// ACK
+	static int ACK = 101;
 
 	public static void main(String[] args) {
 		System.out.println("Iniciando...");
@@ -58,7 +62,12 @@ public class Sender {
 
 		// Fluxo de envio de mensagens e confirmações de entrega
 		boolean okToContinue = true;
-		while (lastReadFile < fileChunks) {
+		while (seq < fileChunks) {
+			okToContinue = true;
+			System.out.println("/////////////////////");
+			System.out.println("seq: " + seq);
+			System.out.println("SlowStart: " + SlowStart);
+			System.out.println("ACK: " + ACK);
 			// Define o array de mensagens a enviar
 			getMessage();
 			// Envia as mensagens, N vezes, de acordo com slow start
@@ -71,7 +80,9 @@ public class Sender {
 			if (okToContinue && SlowStart < 10) {
 				SlowStart = SlowStart * 2;
 			}
+			System.out.println("/////////////////////");
 		}
+		System.out.println("AAAAAAAAAAAAAAAAAAAAAAAAAA");
 		sendFinalMessage();
 		senderSocket.close();
 	}
@@ -81,9 +92,15 @@ public class Sender {
 	private static boolean receiveACK() {
 		try {
 			senderSocket.receive(receivedPacket);
+			String receivedACK = new String(receivedPacket.getData());
+			receivedACK = receivedACK.replaceAll("[^\\d.]", "");
+			ACK = Integer.parseInt(receivedACK);
+			System.out.println("ACK recebida: " + ACK);
 			return true;
-		} catch (IOException e) {
-			System.out.println("Ocorreu um erro ao receber a mensagem");
+
+		} catch (Exception e) {
+			System.out.println("--------------");
+			System.out.println("Erro ao receber ACK");
 			recoverFromError();
 			return false;
 		}
@@ -91,47 +108,40 @@ public class Sender {
 
 	// Logica de recuperação em caso de erro
 	private static void recoverFromError() {
-		// Volta os arquivos lidos para o inicio da iteração
-		lastReadFile = lastReadFile - SlowStart;
-		// Volta slow start para 1
-		SlowStart = 1;
+
 	}
 
 	// Envio de mensagens
 	// Envia N pedaços do arquivo, de acordo com slow start
 	private static void sendMessage(int index) {
-		byte[] sendData = new byte[1024];
-		FileInputStream fis = null;
 		try {
 			if (index < messages.size()) {
-				fis = new FileInputStream(messages.get(index));
-				fis.read(sendData);
-				fis.close();
+				byte[] sendData = ser.serialize(messages.get(index));
+				DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, receiverPort);
+				senderSocket.send(sendPacket);
 			}
 
-		} catch (IOException e1) {
-			System.out.println("Ocorreu um erro ao obter o arquivo para enviar");
+		} catch (
+
+		IOException e1) {
+			System.out.println("Ocorreu um erro ao enviar a mensagem");
 			e1.printStackTrace();
-		}
-		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, receiverPort);
-		try {
-			senderSocket.send(sendPacket);
-		} catch (IOException e) {
-			System.out.println("erro durante envio do pacote ao receiver");
-			e.printStackTrace();
 		}
 	}
 
 	// Logica de obtenção dos pedaços do arquivo a serem enviados
 	private static void getMessage() {
-		messages = new ArrayList<File>();
+		messages = new ArrayList<NetPackage>();
 		for (int i = 0; i < SlowStart; i++) {
-			lastReadFile++;
-			if (lastReadFile > fileChunks) {
+			seq++;
+			if (seq > fileChunks) {
 				break;
 			}
-			messages.add(fs.getFile(lastReadFile));
+			NetPackage np = new NetPackage();
+			np.createObj(ACK, seq, fs.getFile(seq));
+			messages.add(np);
 		}
+
 	}
 
 	// Config de IP
