@@ -57,6 +57,7 @@ public class Sender {
 		// -------------------------- //
 
 		// Fluxo de envio de mensagens e confirmações de entrega
+		boolean okToContinue = true;
 		while (lastReadFile < fileChunks) {
 			// Define o array de mensagens a enviar
 			getMessage();
@@ -65,9 +66,9 @@ public class Sender {
 				sendMessage(i);
 			}
 			// Recebe uma confirmação
-			receiveACK();
+			okToContinue = receiveACK();
 
-			if (SlowStart < 10) {
+			if (okToContinue && SlowStart < 10) {
 				SlowStart = SlowStart * 2;
 			}
 		}
@@ -77,12 +78,23 @@ public class Sender {
 
 	// Recebimento de ACK
 	// Confirmação do cliente de que recebeu corretamente os arquivos
-	private static void receiveACK() {
+	private static boolean receiveACK() {
 		try {
 			senderSocket.receive(receivedPacket);
+			return true;
 		} catch (IOException e) {
 			System.out.println("Ocorreu um erro ao receber a mensagem");
+			recoverFromError();
+			return false;
 		}
+	}
+
+	// Logica de recuperação em caso de erro
+	private static void recoverFromError() {
+		// Volta os arquivos lidos para o inicio da iteração
+		lastReadFile = lastReadFile - SlowStart;
+		// Volta slow start para 1
+		SlowStart = 1;
 	}
 
 	// Envio de mensagens
@@ -144,7 +156,7 @@ public class Sender {
 	private static void setSenderSocket() {
 		try {
 			senderSocket = new DatagramSocket(senderPort);
-			senderSocket.setSoTimeout(timeoutSeconds * 1000);
+			// senderSocket.setSoTimeout(timeoutSeconds * 1000);
 		} catch (SocketException e) {
 			System.out.println("Erro! porta ja em uso");
 		}

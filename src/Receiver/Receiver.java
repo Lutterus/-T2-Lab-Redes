@@ -36,17 +36,21 @@ public class Receiver {
 		System.out.println("Pronto para receber");
 
 		// Fluxo de recebimento de mensagens e confirmações de entrega
+		boolean okToContinue = true;
 		while (!stop) {
 			// Recebe N mensagens, de acordo com slow start
 			for (int i = 0; i < SlowStart; i++) {
-				if (!stop) {
-					receiveMessage();
+				// Confição de parada
+				if (stop || !okToContinue) {
+					break;
 				}
+				// Recebimento de mensagem
+				okToContinue = receiveMessage();
 			}
 			// Envia uma confirmação
 			sendMessage();
 
-			if (SlowStart < 10) {
+			if (okToContinue && SlowStart < 10) {
 				SlowStart = SlowStart * 2;
 			}
 		}
@@ -65,7 +69,7 @@ public class Receiver {
 	// Confirma que recebeu os arquivos
 	private static void sendMessage() {
 		byte[] sendData = new byte[1024];
-		String newACK = Integer.toString(ACK + SlowStart);
+		String newACK = Integer.toString(ACK + lastReadFile);
 		sendData = newACK.getBytes();
 		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, senderPort);
 		try {
@@ -94,8 +98,17 @@ public class Receiver {
 			return true;
 		} catch (IOException e) {
 			System.out.println("Ocorreu um erro ao receber a mensagem");
+			recoverFromError();
 			return false;
 		}
+	}
+
+	// Logica de recuperação em caso de erro
+	private static void recoverFromError() {
+		// Volta os arquivos lidos para o inicio da iteração
+		lastReadFile = lastReadFile - SlowStart;
+		// Volta slow start para 1
+		SlowStart = 1;
 	}
 
 	// Verificação de condição de parada
@@ -128,7 +141,7 @@ public class Receiver {
 	private static void setReceiverSocket() {
 		try {
 			receiverSocket = new DatagramSocket(receiverPort);
-			receiverSocket.setSoTimeout(timeoutSeconds * 1000);
+			// receiverSocket.setSoTimeout(timeoutSeconds * 1000);
 		} catch (SocketException e1) {
 			System.out.println("Ocorreu um erro ao setar o datagram");
 		}
