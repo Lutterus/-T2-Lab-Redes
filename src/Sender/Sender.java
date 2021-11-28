@@ -8,29 +8,28 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 
 public class Sender {
 	// Nome do arquivo a ser lido.
 	// OBS: O arquivo deve estar na mesma pasta /files
 	static String fileName = "enunciado.pdf";
-
+	// Configs do socket
 	static int timeoutSeconds = 2;
 	static int receiverPort = 9876;
 	static int senderPort = 9878;
 	static DatagramSocket senderSocket;
 	static DatagramPacket receivedPacket;
 	static InetAddress IPAddress;
+	// Mensagens a serem lida em uma iteração
 	static ArrayList<File> messages;
-	// Tecnica slow start
+	// Manipulador de arquivos
+	static FileSplitter fs;
+	static int fileChunks = 0;
+	// Slow start
 	static int SlowStart = 1;
 	// Qual o ultimo arquivo enviado
 	static int lastReadFile = 0;
-	// Manipulador de arquivos
-	static FileSplitter fs;
-	// Tamanho do arquivo a enviar
-	static int fileChunks = 0;
 
 	public static void main(String[] args) {
 		System.out.println("Iniciando...");
@@ -52,7 +51,7 @@ public class Sender {
 		setSenderSocket();
 		// Declara o pacote a ser recebido
 		declarePackage();
-		// obtem endereco ip do receiver com o DNS
+		// Seta ip do receiver
 		setIp();
 		System.out.println("Pronto para enviar");
 		// -------------------------- //
@@ -76,7 +75,6 @@ public class Sender {
 	}
 
 	private static void receiveACK() {
-		// Recebimento de mensagem
 		try {
 			senderSocket.receive(receivedPacket);
 		} catch (IOException e) {
@@ -90,8 +88,8 @@ public class Sender {
 		try {
 			if (index < messages.size()) {
 				fis = new FileInputStream(messages.get(index));
-	            fis.read(sendData);
-	            fis.close();
+				fis.read(sendData);
+				fis.close();
 			}
 
 		} catch (IOException e1) {
@@ -137,7 +135,7 @@ public class Sender {
 	private static void setSenderSocket() {
 		try {
 			senderSocket = new DatagramSocket(senderPort);
-			// senderSocket.setSoTimeout(timeoutSeconds * 1000);
+			senderSocket.setSoTimeout(timeoutSeconds * 1000);
 		} catch (SocketException e) {
 			System.out.println("Erro! porta ja em uso");
 		}
