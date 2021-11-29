@@ -24,8 +24,6 @@ public class Receiver {
 	static Serializer ser = new Serializer();
 	// Slow Star
 	static int SlowStart = 1;
-	// Qual o ultimo arquivo recebido
-	static int seq = 0;
 	// ACK
 	static int ACK = 100;
 
@@ -44,7 +42,6 @@ public class Receiver {
 		while (!stop) {
 			okToContinue = true;
 			System.out.println("/////////////////////");
-			System.out.println("seq: " + seq);
 			System.out.println("SlowStart: " + SlowStart);
 			System.out.println("ACK: " + ACK);
 			// Recebe N mensagens, de acordo com slow start
@@ -66,7 +63,6 @@ public class Receiver {
 			if (okToContinue && SlowStart < 10) {
 				SlowStart = SlowStart * 2;
 			}
-			System.out.println("/////////////////////");
 		}
 		receiverSocket.close();
 		// Monta o arquivo
@@ -82,7 +78,6 @@ public class Receiver {
 	// Envio de mensagem
 	// Confirma que recebeu os arquivos
 	private static void sendMessage() {
-		System.out.println("entrou");
 		byte[] sendData = new byte[1024];
 		ACK = 100 + SlowStart;
 		System.out.println("enviando ACK:" + ACK);
@@ -111,13 +106,11 @@ public class Receiver {
 			} else {
 				// Se nao deve, é um novo arquivo
 				NetPackage np = (NetPackage) ser.deserialize(buffer);
-				seq++;
-				fs.saveFile(seq, np.getFileArray());
+				fs.saveFile(np.getSeq(), np.getFileArray());
 			}
 			return true;
 		} catch (Exception e) {
 			System.out.println("--------------");
-			e.printStackTrace();
 			System.out.println("Ocorreu um erro ao receber a mensagem");
 			return false;
 		}
@@ -125,7 +118,11 @@ public class Receiver {
 
 	// Logica de recuperação em caso de erro
 	private static void recoverFromError() {
-		
+		System.out.println("SlowStart: " + SlowStart);
+		System.out.println("ACK: " + ACK);
+		SlowStart = 1;
+		ACK = 101;
+		System.out.println("--------------");
 	}
 
 	// Verificação de condição de parada
@@ -158,7 +155,7 @@ public class Receiver {
 	private static void setReceiverSocket() {
 		try {
 			receiverSocket = new DatagramSocket(receiverPort);
-			// receiverSocket.setSoTimeout(timeoutSeconds * 1000);
+			receiverSocket.setSoTimeout(timeoutSeconds * 1000);
 		} catch (SocketException e1) {
 			System.out.println("Ocorreu um erro ao setar o datagram");
 		}

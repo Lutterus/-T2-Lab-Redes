@@ -16,7 +16,7 @@ public class Sender {
 	// OBS: O arquivo deve estar na mesma pasta /files
 	static String fileName = "enunciado.pdf";
 	// Configs do socket
-	static int timeoutSeconds = 2;
+	static int timeoutSeconds = 4;
 	static int receiverPort = 9876;
 	static int senderPort = 9878;
 	static DatagramSocket senderSocket;
@@ -33,7 +33,7 @@ public class Sender {
 	// Qual o ultimo arquivo enviado
 	static int seq = 0;
 	// ACK
-	static int ACK = 101;
+	static int ACK = 100;
 
 	public static void main(String[] args) {
 		System.out.println("Iniciando...");
@@ -80,9 +80,7 @@ public class Sender {
 			if (okToContinue && SlowStart < 10) {
 				SlowStart = SlowStart * 2;
 			}
-			System.out.println("/////////////////////");
 		}
-		System.out.println("AAAAAAAAAAAAAAAAAAAAAAAAAA");
 		sendFinalMessage();
 		senderSocket.close();
 	}
@@ -94,10 +92,16 @@ public class Sender {
 			senderSocket.receive(receivedPacket);
 			String receivedACK = new String(receivedPacket.getData());
 			receivedACK = receivedACK.replaceAll("[^\\d.]", "");
-			ACK = Integer.parseInt(receivedACK);
-			System.out.println("ACK recebida: " + ACK);
+			int newACK = Integer.parseInt(receivedACK);
+			System.out.println("ACK recebida: " + newACK);
+			if (newACK != (100 + SlowStart)) {
+				System.out.println("--------------");
+				System.out.println("ACK diferente do esperado:");
+				System.out.println("esperava: " + (100 + SlowStart));
+				throw new Exception();
+			}
+			ACK = newACK;
 			return true;
-
 		} catch (Exception e) {
 			System.out.println("--------------");
 			System.out.println("Erro ao receber ACK");
@@ -108,7 +112,13 @@ public class Sender {
 
 	// Logica de recuperação em caso de erro
 	private static void recoverFromError() {
-
+		System.out.println("seq:" + seq);
+		System.out.println("SlowStart: " + SlowStart);
+		System.out.println("ACK: " + ACK);
+		seq = seq - SlowStart;
+		SlowStart = 1;
+		ACK = 101;
+		System.out.println("--------------");
 	}
 
 	// Envio de mensagens
@@ -150,7 +160,6 @@ public class Sender {
 			IPAddress = InetAddress.getByName("localhost");
 			System.out.println("Conectado ao receiver com sucesso");
 		} catch (UnknownHostException e) {
-			System.out.println("");
 			System.out.println("erro durante obtencao do ip do receiver");
 			e.printStackTrace();
 		}
@@ -166,7 +175,7 @@ public class Sender {
 	private static void setSenderSocket() {
 		try {
 			senderSocket = new DatagramSocket(senderPort);
-			// senderSocket.setSoTimeout(timeoutSeconds * 1000);
+			senderSocket.setSoTimeout(timeoutSeconds * 1000);
 		} catch (SocketException e) {
 			System.out.println("Erro! porta ja em uso");
 		}
