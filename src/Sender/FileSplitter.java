@@ -5,6 +5,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.util.Base64;
 
 public class FileSplitter {
 	// Caminho relativo para o arquivo
@@ -49,5 +55,24 @@ public class FileSplitter {
 		System.out.println("arquivo: " + lastReadFile);
 		String composedName = path + fileName + "." + lastReadFile;
 		return new File(composedName);
+	}
+
+	public void printMD5() throws Exception {
+		String composedName = path + fileName;
+		byte[] bytes = createMd5(composedName);
+		String string = Base64.getEncoder().encodeToString(bytes);
+		System.out.println(string);
+	}
+
+	public byte[] createMd5(String composedName) throws Exception {
+		MessageDigest md_1 = MessageDigest.getInstance("MD5");
+		InputStream is_1 = new FileInputStream(composedName);
+		try {
+			is_1 = new DigestInputStream(is_1, md_1);
+		} finally {
+			is_1.close();
+		}
+		byte[] digest_1 = md_1.digest();
+		return digest_1;
 	}
 }

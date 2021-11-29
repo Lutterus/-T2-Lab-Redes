@@ -2,10 +2,17 @@ package Receiver;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 
 public class FileLumper {
@@ -54,5 +61,24 @@ public class FileLumper {
 				.listFiles((File dir, String name) -> name.matches(destFileName + "[.]\\d+"));
 		Arrays.sort(files);// ensuring order 001, 002, ..., 010, ...
 		return Arrays.asList(files);
+	}
+
+	public void printMD5() throws Exception {
+		String composedName = path + fileName;
+		byte[] bytes = createMd5(composedName);
+		String string = Base64.getEncoder().encodeToString(bytes);
+		System.out.println(string);
+	}
+
+	public byte[] createMd5(String composedName) throws Exception {
+		MessageDigest md_1 = MessageDigest.getInstance("MD5");
+		InputStream is_1 = new FileInputStream(composedName);
+		try {
+			is_1 = new DigestInputStream(is_1, md_1);
+		} finally {
+			is_1.close();
+		}
+		byte[] digest_1 = md_1.digest();
+		return digest_1;
 	}
 }

@@ -73,6 +73,12 @@ public class Receiver {
 			System.out.println("Ocorreu um erro ao mergear os arquivos");
 			e.printStackTrace();
 		}
+		try {
+			fs.printMD5();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	// Envio de mensagem

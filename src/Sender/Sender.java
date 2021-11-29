@@ -83,6 +83,12 @@ public class Sender {
 		}
 		sendFinalMessage();
 		senderSocket.close();
+		try {
+			fs.printMD5();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	// Recebimento de ACK
